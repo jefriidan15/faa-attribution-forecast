@@ -36,6 +36,7 @@ bytes give the same output bytes, every run.
 import json
 import math
 import os
+import sys
 from os import listdir, makedirs
 from os.path import join
 
@@ -153,9 +154,15 @@ def main():
     names = sorted(f for f in listdir(INPUT_DIR) if f.endswith(".in"))
     for name in names:
         case_id = name[: -len(".in")]
-        with open(join(INPUT_DIR, name), "r", encoding="utf-8") as handle:
-            case = json.load(handle)
-        result = run_case(case)
+        try:
+            with open(join(INPUT_DIR, name), "r", encoding="utf-8") as handle:
+                case = json.load(handle)
+            if not isinstance(case, dict) or "markets" not in case or "horizon_minutes" not in case:
+                raise ValueError("case is missing 'markets' or 'horizon_minutes'")
+            result = run_case(case)
+        except Exception as exc:  # one bad case file must not kill the whole run
+            print(f"warning: skipping {name}: {exc}", file=sys.stderr)
+            continue
         text = json.dumps(result, separators=(",", ":"), sort_keys=False) + "\n"
         with open(join(OUTPUT_DIR, case_id + ".out"), "w", encoding="utf-8") as handle:
             handle.write(text)
